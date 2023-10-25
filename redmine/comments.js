@@ -13,7 +13,7 @@
     'use strict';
 
     // Your code here...
-    console.error("快捷注释脚本加载");
+    console.error("快捷注释脚本加载...");
 
     // 定位耗时注释的文本框
     var inputElement = document.getElementById("time_entry_comments")
