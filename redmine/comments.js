@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         耗时快捷注释
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  jojo-cc-redmine fast fill comments
 // @author       章小慢
 // @match        https://t.xjjj.co/*time_entries*
