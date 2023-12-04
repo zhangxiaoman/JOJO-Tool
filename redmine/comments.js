@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         耗时快捷注释
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  jojo-cc-redmine fast fill comments
 // @author       章小慢
 // @match        https://t.xjjj.co/*time_entries*
@@ -30,12 +30,16 @@
     // 活动类型
     var activeType = "";
 
+    // 需求类型 可选的活动范围
     var activeStoryArray = [11,15,16,20];
 
+    // 测试任务类型 可选的活动范围
     var activeTestArray = [11,14,17];
 
+    // 开发任务类型 可选的活动范围
     var activeDevelopArray = [9,18,19];
 
+    // BUG类型 可选的活动范围
     var activeBugArray = [11,15]
     
 
@@ -232,18 +236,9 @@
 
         // 获取所有 option 元素
         let options = activitySelect.options;
-         // 遍历所有 option 元素
-        for (let i = 0; i < options.length; i++) {
-            if (!filterArray.includes(parseInt(options[i].value))) {
-                options[i].disabled = true;
-            }
-        }
-
-         // 倒序遍历并移除 option 元素
+        // 倒序遍历并移除 option 元素, Fix在移除的过程中, option 的索引变化.不能遍历所有的值
         for (let i = options.length - 1; i >= 0; i--) {
             if (options[i].value != "" && !filterArray.includes(parseInt(options[i].value))) {
-                console.log(options[i].value);
-                console.log(options[i].innerText+"被移除");
                 activitySelect.removeChild(options[i]);
             }
         }   
@@ -280,6 +275,12 @@
 
     // 构建快捷注释下拉的选项
     function buidlCommentOptions(activityValue) {
+        // 活动选择的是 "请选择" 清空活动注释的下拉
+        if (isNaN(activityValue)) {
+            commentselect.innerHTML = "";
+            commentsInputElement.value = "";
+            return;
+        }
         var optionData = commentsMap.get(activityValue)
         if (optionData == undefined || optionData.length == 0) {
             optionData = defaultOptionData;
@@ -300,14 +301,11 @@
 
     // 初始化数据
     initData();
-    // 
+    // 加载注释的下拉框
     renderCommentSelese();
     // 处理注释下拉的事件注册, 以及在页面的位置
     pageLoad();
-
     // 根据任务类型过滤活动可选的范围
     filterActiveSelectOption();
-    
-
     
 })();
