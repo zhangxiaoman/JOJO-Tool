@@ -1,380 +1,226 @@
 // ==UserScript==
-// @name         耗时快捷注释
-// @namespace    http://tampermonkey.net/
-// @version      2.2
-// @description  jojo-cc-redmine fast fill comments
-// @author       章小慢
-// @match        https://t.xjjj.co/*time_entries*
-// @match        https://t.xjjj.co/issues/*
-// @icon         https://devops.xjjj.co/favicon.ico
-// @grant        none
-// @downloadURL https://update.greasyfork.org/scripts/478246/%E8%80%97%E6%97%B6%E5%BF%AB%E6%8D%B7%E6%B3%A8%E9%87%8A.user.js
-// @updateURL https://update.greasyfork.org/scripts/478246/%E8%80%97%E6%97%B6%E5%BF%AB%E6%8D%B7%E6%B3%A8%E9%87%8A.meta.js
+// @name        迭代初始化 1.0
+// @namespace   http://tampermonkey.net/
+// @version     1.0
+// @description An example to upload and read Excel file in Redmine.
+// @author      小慢
+// @match     
+// @grant       GM_addStyle
+// @require      https://code.jquery.com/jquery-3.6.0.min.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // Your code here...
-    console.info("快捷注释脚本加载...");
-    // 定位耗时注释的文本框
-    var commentsInputElement = document.getElementById("time_entry_comments")
+    const apiKey = 'c05d327406396c03c8ae43033d66229c886a9af4';
 
-    var commentsInputElementFree;
-    var commentsInputElementText = commentsInputElement.value;
-    var commentsInputElementTextPrefix = commentsInputElementText.split("|")[0];
-    // 如果没有注释的文本框不启用快捷注释功能
-    if (commentsInputElement == undefined) {
-        console.log("不启用快捷注释");
-        return;
+    const redmineUrl = '';
+
+
+    // 优先级定义
+    const priority = {"P0": 1,"P1": 2,"P2": 3,"P3": 4}
+    // 需求文档地址前缀
+    const issueLinkPrefix = "jojoread.yuque.com"
+
+    // 查询迭代列表的 table
+    var buttons = document.querySelectorAll("td.buttons");
+
+    var projectId = 0;
+    if (window.location.href.includes("cc_sprint")) {
+        projectId = 72;
     }
 
-    // 分组注释数据块
-    var commentsMap = new Map();
-    // 快捷注释下拉默认值
-    var defaultOptionData = [];
-    // 活动类型
-    var activeType = "";
 
-    // 需求类型 可选的活动范围
-    var activeStoryArray = [11,15,16,20];
+    for (var buttonItem of buttons) {
+        
+        var initBtn = document.createElement("input");
+        initBtn.setAttribute("class", "init-sprint");
+        initBtn.setAttribute("type", "button");
+        initBtn.setAttribute("value", "迭代初始化");
+        initBtn.style.marginLeft = '5px';
 
-    // 测试任务类型 可选的活动范围
-    var activeTestArray = [11,14,17];
-
-    // 开发任务类型 可选的活动范围
-    var activeDevelopArray = [9,18,19];
-
-    // BUG类型 可选的活动范围
-    var activeBugArray = [11,15]
-    
-
-    // 注释下拉对象
-    var commentselect;
-
-    // 活动下拉对象
-    var activitySelect;
-
-    var commentPElement;
-
-    // 初始化注释的下拉框数据, 定位commentselect, activitySelect
-    function initData () {
-        commentselect = document.createElement('select');
-        commentPElement = document.createElement('p');
-        activitySelect = document.getElementById("time_entry_activity_id")
-        defaultOptionData = [
-            "熟悉需求",
-            "熟悉需求:下个迭代",
-            "需求评审",
-            "需求讨论",
-            "技术方案设计",
-            "技术方案评审",
-            "技术方案熟悉",
-            "测试用例编写",
-            "测试用例评审",        
-            "开发",
-            "SONAR",
-            "自测",
-            "联调",
-            "冒烟",
-            "单测",
-            "FAT测试",
-            "FAT测试:功能测试",
-            "FAT测试:数据准备",
-            "UAT测试",
-            "自动化",
-            "JACOCO",
-            "性能测试",
-            "性能测试:数据准备",
-            "回归用例",
-            "问题排查",
-            "修复BUG",
-            "文档沉淀",
-            "值班:线上",
-            "值班:线下",
-            "上线准备",
-            "上线验证",
-            "会议: 其他",
-            "会议: 测试周会",
-            "会议: 小组交流",
-            "会议: 后端周会",
-            "会议: 前端周会",
-            "会议: 迭代回顾",
-        ];
-
-        // 熟悉需求
-        commentsMap.set(16, [
-            "熟悉需求",
-            "熟悉需求:下个迭代"
-        ]);
-        // 需求评审
-        commentsMap.set(20, [
-            "需求评审",
-        ]);
-        // 测试用例编写
-        commentsMap.set(14, [
-            "测试用例编写",
-        ]);
-        // 测试用例评审
-        commentsMap.set(17, [
-            "测试用例评审",
-        ]);
-
-        // 技术方案设计
-        commentsMap.set(18, [
-            "技术方案设计",
-        ]);
-
-        // 技术方案评审
-        commentsMap.set(19, [
-            "技术方案评审",
-        ]);
-
-        // 技术方案设计
-        commentsMap.set(8, [
-            "技术方案设计",
-        ]);
-        // 开发
-        commentsMap.set(9, [
-            "开发",
-            "SONAR",
-            "自测",
-            "联调",
-            "冒烟",
-            "单测",
-        ]);
-        // 测试
-        commentsMap.set(11, [
-            "FAT测试",
-            "FAT测试:功能测试",
-            "FAT测试:数据准备",
-            "UAT测试",
-            "自动化",
-            "JACOCO",
-            "性能测试",
-            "性能测试:数据准备",
-            "回归用例",
-            "文档沉淀",
-            "值班:线上",
-            "值班:线下",
-            "上线准备",
-            "上线验证",
-            "会议: 其他",
-            "会议: 测试周会",
-            "会议: 迭代回顾",
-        ]);
-
-        // 研发跟测
-        commentsMap.set(15, [
-            "问题排查",
-            "修复BUG",
-            "文档沉淀",
-            "值班:线上",
-            "值班:线下",
-            "上线准备",
-            "上线验证",
-            "会议: 其他",
-            "会议: 小组交流",
-            "会议: 后端周会",
-            "会议: 迭代回顾",
-        ]);
-    }
-
-    // 页面加载
-    function pageLoad() {        
-        // 将快捷注释下拉的值填充到原来的 input 框内
-        commentselect.addEventListener("change", function() {
-            if (commentselect.value.length > 0) {
-                commentsInputElement.value = commentselect.value+ "|" + commentsInputElementFree.value;
-            }
-        });
-        commentPElement.appendChild(commentselect);
-
-        var divEle = commentsInputElement.parentNode.parentNode;
-        // 文本注释框所属的 P 标签
-        var textCommentParentP = commentsInputElement.parentNode;
-
-        // 活动下拉框所属的 P 标签
-        var activityParentP = activitySelect.parentNode;
-
-        divEle.insertBefore(activityParentP,textCommentParentP.previousSibling)
-
-        // 插入到原来的注释的后面
-        divEle.insertBefore(commentPElement,textCommentParentP.previousSibling)
-
-
-
-        // 复制一个文本框出来.
-        var textCommentParentPNew = textCommentParentP.cloneNode(true);
-
-        // 原来的注释设置为不可编辑
-        commentsInputElement.setAttribute('readonly', 'readonly');
-
-        // 插入到原来的注释的后面
-        textCommentParentP.insertAdjacentElement('afterend', textCommentParentPNew);
-
-        // 用来随意输入注释
-        commentsInputElementFree = textCommentParentPNew.querySelector('input');
-        textCommentParentPNew.querySelector('label').innerText="自由注释";
-        commentsInputElementFree.setAttribute("id","time_entry_comments_free")
-        commentsInputElementFree.setAttribute("name","")
-
-        // 分割 原注释中的内容
-        var textArray = commentsInputElementText.split("|");
-        // 移除第一个元素
-        textArray.shift();
-        // 自由输入的 input 框内填充后面的内容
-        commentsInputElementFree.value = textArray.join('');
-
-        // 添加失去焦点事件监听器
-        commentsInputElementFree.addEventListener('blur', function() {
-            if (commentselect.value.length > 0) {
-                // 失去焦点时触发的操作
-                commentsInputElement.value = commentselect.value+ "|" + commentsInputElementFree.value;
-            }
-
-        });
-
-        // 添加失去焦点事件监听器
-        commentsInputElementFree.addEventListener('input', function() {
-            if (commentselect.value.length > 0) {
-                // 失去焦点时触发的操作
-                commentsInputElement.value = commentselect.value+ "|" + commentsInputElementFree.value;
-            }
-
-
-        });
-
-
-
-    }
-
-    // 根据任务类型过滤活动可选的值
-    function filterActiveSelectOption() {
-
-        // 判断任务类型是什么类型? 
-        var issueText ;
-        if (document.getElementById("time_entry_issue")) {
-            issueText = document.getElementById("time_entry_issue").innerText;
+        var editButton = buttonItem.querySelector('a.icon-edit');
+        if (editButton) {
+            buttonItem.insertBefore(initBtn, editButton.previousSibling);
         } else {
-            var issueTrackerEle = document.getElementById("issue_tracker_id")
-            if (issueTrackerEle && issueTrackerEle.selectedOptions[0]) {
-                issueText = issueTrackerEle.selectedOptions[0].innerText+" ";
-            }
+            // 如果没找到编辑按钮，就直接添加到td元素末尾
+            buttonItem.appendChild(initBtn);
         }
-        
-        if (issueText.includes("测试任务 ")) {
-            activeType = "test";
-        }
-        if (issueText.includes("开发任务 ")) {
-            activeType = "develop";
-        }
-        if (issueText.includes("需求 ")) {
-            activeType = "story";
-        }
-
-        if (issueText.includes("Bug ")) {
-            activeType = "bug";
-        }        
-        var filterArray = [];
-        switch (activeType) {
-            case "test": 
-                filterArray = activeTestArray;
-                break;
-            case "develop": 
-                filterArray = activeDevelopArray;
-                break;
-            case "story":
-                filterArray = activeStoryArray;
-                break;
-            case "bug":
-                filterArray = activeBugArray;
-                break;
-            default:
-                filterArray = activeStoryArray;
-                break;
-        }
-
-        // 获取所有 option 元素
-        let options = activitySelect.options;
-        // 倒序遍历并移除 option 元素, Fix在移除的过程中, option 的索引变化.不能遍历所有的值
-        for (let i = options.length - 1; i >= 0; i--) {
-            if (options[i].value != "" && !filterArray.includes(parseInt(options[i].value))) {
-                activitySelect.removeChild(options[i]);
-            }
-        }   
-         // 模拟触发事件
-        triigerChange(activitySelect);
-            
     }
 
-    function triigerChange(selectObj){
-        var changeEvent = new Event("change");
-        selectObj.dispatchEvent(changeEvent)
-    }
-    // 处理快捷注释下拉框
-    function renderCommentSelese() {    
-        // 定义一个 p 标签, 并且设置 label
-        commentPElement.innerHTML = '<label for="time_entry_comments">快捷注释<span class="required"> *</span></label>';
+    var initBtns= ($(".init-sprint"));
+
+   // 按钮点击事件处理函数
+   initBtns.click(function() {
+        // 创建输入文本框的弹出框及样式设置
+        const inputBox = $('<div>').addClass('input-popup').html('<input type="text" id="issueLink" placeholder="需求链接"><br><button id="confirmButton">确定</button><button id="cancelButton">取消</button>');
+
+        // 获取按钮的兄弟节点中的编辑和删除链接的href属性
+        var editHref = $(this).siblings('a.icon-edit').attr('href');
+        // 从编辑链接的href属性中提取数字
+        var matchNum = editHref.match(/(\d+)/);
         
-        // 定位活动的下拉选择
-        var activitySelect = document.getElementById("time_entry_activity_id")
+        if (!matchNum) {
+            alert("获取迭代ID失败")
+        }
+        var sprintId = matchNum[1];
+        console.log(sprintId);
 
+        // 获取当前按钮所在的行（tr元素）
+        var row = $(this).closest('tr');
+        // 获取当前行下的第一个td元素中的链接文本内容
+        var sprintName = row.find('td:first-child a').text().replace("sprint","SP");
+        
+        
+        const overlay = $('<div>').addClass('overlay').css({
+            'position': 'fixed',
+            'top': '0',
+            'left': '0',
+            'width': '100%',
+            'height': '100%',
+            'background-color': 'rgba(0, 0, 0, 0.5)',
+            'z-index': '9998',
+            'display': 'flex',
+            'justify-content': 'center',
+            'align-items': 'center'
+        });
+        overlay.append(inputBox);
+        $('body').append(overlay);
 
-        // 将快捷注释下拉的值填充到原来的 input 框内
-        activitySelect.addEventListener("change", function() {
-            var selectedValue = parseInt(activitySelect.value);
-            buidlCommentOptions(selectedValue)
+        // 确定按钮点击事件处理函数
+        $('#confirmButton').on('click', function() {
+            const inputValue = $('#issueLink').val();        
+            // 移除弹出框
+            overlay.remove();
+           var dataArr = buildData(inputValue,sprintId,sprintName);
+            for (let data of dataArr) {
+                create(data)
+            }
+
         });
 
-        // 模拟触发事件
-        triigerChange(activitySelect);
-       
+        // 取消按钮点击事件处理函数
+        $('#cancelButton').on('click', function() {
+            // 移除弹出框
+            overlay.remove();
+        });
+    });
+    // 样式定义
+   $('head').append('<style>.input-popup { background-color: white; padding: 20px; border-radius: 4px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); }.input-popup input { margin-bottom: 10px; width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }.input-popup button { background-color: #4CAF50; color: white; border: none; padding: 5px 18px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 4px; cursor: pointer; margin-right: 10px; }.input-popup button:last-child { margin-right: 0; }</style>');
+
+
+
+    function buildData(link, sprintId, springName){
+        return  [
+            {
+                "需求": {
+                    "text": "【产品】"+springName+"-值班",
+                    "link": link
+                },
+                "序号": "01",
+                "优先级": "P0",
+                "迭代": sprintId
+            },
+             {
+                "需求": {
+                    "text": "【产品】"+springName+"-杂项",
+                    "link": link
+                },
+                "序号": "02",
+                "优先级": "P0",
+                "迭代": sprintId
+            },
+             {
+                "需求": {
+                    "text": "【产品】"+springName+"-SM日常",
+                    "link": link
+                },
+                "序号": "03",
+                "优先级": "P0",
+                "迭代": sprintId
+            },
+       ]
     }
 
-    // 构建快捷注释下拉的选项
-    function buidlCommentOptions(activityValue) {
-        // 活动选择的是 "请选择" 清空活动注释的下拉
-        if (isNaN(activityValue)) {
-            commentselect.innerHTML = "";
-            commentsInputElement.value = "";
-            if (commentsInputElementFree) {
-                commentsInputElementFree.value = "";
+
+    function create(data){
+        var issueSource = "业务需求";
+        if (data["需求"]["text"].includes("【技术】")) {
+            issueSource = "技术需求";
+        }
+       if (data["需求"]["text"].includes("【产品】")) {
+            issueSource = "产品需求";
+        }
+        const newIssueData = {
+            "issue": {
+                // Replace with actual values
+                "project_id": projectId, //
+                "tracker_id": 1, //
+                "subject": data['序号']+data["需求"]["text"],
+                "description": '',
+                "status_id": 1,  // 1:新建
+                "priority_id": priority[data["优先级"]],
+                "custom_field_values": {
+                    "3": [], // 对应端 ["服务端","iOS","Android","H5","PC"]
+                    "4": issueSource,
+                    "5": data["需求"]["link"],
+                    "6": '',
+                    "7": ''
+                },
+                "agile_data_attributes": {
+                    "story_points": 0,
+                    "agile_sprint_id": parseInt(data["迭代"])
+                }
             }
+        };
 
-            return;
-        }
-        var optionData = commentsMap.get(activityValue)
-        if (optionData == undefined || optionData.length == 0) {
-            optionData = defaultOptionData;
-        }
         
-        commentselect.innerHTML = "";
-        for (var i = 0; i < optionData.length; i++) {
-            var option = document.createElement("option");
-            option.value = optionData[i];
-            option.text = optionData[i];
-            commentselect.add(option);
-        }
-
-        // 模拟触发事件
-        triigerChange(commentselect);
+        fetch(`${redmineUrl}issues.json`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Redmine-API-Key': apiKey
+            },
+            body: JSON.stringify(newIssueData) 
+        })
+            .then(response => response.json())
+            .then(result => {
+            console.log(`创建需求成功：${newIssueData["issue"]["subject"]}，需求号为： ${result.issue.id}`);
+            console.log(result)
+            var updateIssueData = {
+                "sprintId": newIssueData["issue"]["agile_data_attributes"]["agile_sprint_id"]
+            }
+            update(result,updateIssueData)
+        })
     }
 
+    function update(data, updateIssueData){
 
-    // 初始化数据
-    initData();
-    // 加载注释的下拉框
-    renderCommentSelese();
-    // 处理注释下拉的事件注册, 以及在页面的位置
-    pageLoad();
-    // 根据任务类型过滤活动可选的范围
-    filterActiveSelectOption();
+        // 编辑新建的时候无法调整的字段
+        const issueId = data.issue.id; // Replace with actual Issue Id to be updated
+        const issueData = {
+            "issue": {
+                "agile_data_attributes": {
+                    "agile_sprint_id": updateIssueData.sprintId // 关联迭代
+                }
+            }
+        };
 
-    // 设置下拉的值. 页面回显使用
-    commentselect.value = commentsInputElementTextPrefix;
-    // 模拟触发事件
-    triigerChange(commentselect);
-
+        fetch(`${redmineUrl}issues/${issueId}.json`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Redmine-API-Key': apiKey
+            },
+            body: JSON.stringify(issueData) // convert JavaScript object to JSON string
+        })
+            .then(response => {
+            if (response.ok) {
+                console.log(`更新需求成功：${data["issue"]["subject"]}，需求号为： ${data.issue.id}`);
+            } else {
+                console.log(`更新需求接口响应失败： ${data.issue.id}`);
+            }
+        })
+}
 
 })();

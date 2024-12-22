@@ -4,7 +4,7 @@
 // @version     1.0
 // @description An example to upload and read Excel file in Redmine.
 // @author      小慢
-// @match      https://t.xjjj.co/projects/cc_sprint/settings/agile_sprints
+// @match      
 // @grant       GM_addStyle
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // ==/UserScript==
@@ -14,7 +14,7 @@
 
     const apiKey = 'c05d327406396c03c8ae43033d66229c886a9af4';
 
-    const redmineUrl = 'https://t.xjjj.co/';
+    const redmineUrl = '';
 
     // Define the form
     var form = document.createElement("form");
@@ -24,22 +24,24 @@
     // 需求文档地址前缀
     const issueLinkPrefix = "jojoread.yuque.com"
 
-    // Define the button and its attributes
-    var initBtn = document.createElement("input");
-    initBtn.setAttribute("type", "button");
-    initBtn.setAttribute("value", "迭代初始化");
-    initBtn.style.marginLeft = '5px';
+    
 
     // 查询迭代列表的 table 
     var buttons = document.querySelectorAll("td.buttons");
     
 
     for (var buttonItem of buttons) {
+        // Define the button and its attributes
+        var initBtn = document.createElement("input");
+        initBtn.setAttribute("class", "sprint-init")
+        initBtn.setAttribute("type", "button");
+        initBtn.setAttribute("value", "迭代初始化");
+        initBtn.style.marginLeft = '5px';
         buttonItem.insertBefore(initBtn, buttonItem.firstChild);
          // 在编辑按钮之后插入新按钮
         var editButton = buttonItem.querySelector('a.icon-edit');
         if (editButton) {
-            buttonItem.insertBefore(initBtn, editButton.nextSibling);
+            buttonItem.insertBefore(initBtn, editButton.previousSibling);
         } else {
             // 如果没找到编辑按钮，就直接添加到td元素末尾
             buttonItem.appendChild(initBtn);            
@@ -48,7 +50,7 @@
     }
 
    // 按钮点击事件处理函数
-   initBtn.addEventListener('click', function() {
+   $(".sprint-init").click(function() {
         // 创建输入文本框的弹出框及样式设置
         const inputBox = $('<div>').addClass('input-popup').html('<input type="text" id="inputText" placeholder="需求链接"><br><input type="text" id="customer_sprint_id" placeholder="迭代ID"><br><input type="text" id="customer_sprint_name" placeholder="迭代名称"><br><button id="confirmButton">确定</button><button id="cancelButton">取消</button>');
         const overlay = $('<div>').addClass('overlay').css({
