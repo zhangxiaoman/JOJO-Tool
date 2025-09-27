@@ -4,7 +4,7 @@
 // @version      1.0
 // @description  在 issue 列表 主题前面增加一个甘特图的快捷链接
 // @author       小慢
-// @match        
+// @match        *://*/projects/*/issues* 
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=xjjj.co
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @grant        none

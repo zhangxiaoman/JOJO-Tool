@@ -4,7 +4,7 @@
 // @version      0.1
 // @description  为Redmine需求列表添加拖拽排序功能，自动生成序号并批量更新
 // @author       章小慢
-// @match        https://t.xxxxxx.co/projects/*/issues*
+// @match        *://*/projects/*/issues*
 // @grant        GM_addStyle
 // @require      https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js
 // ==/UserScript==
