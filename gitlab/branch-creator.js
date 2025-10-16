@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         GitLab-分支快捷创建
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  快捷创建基于日期的 GitLab 分支，支持选择周几并自动计算往后10次的日期
+// @version      0.3
+// @description  快捷创建基于日期的 GitLab 分支，默认展示最近10天的日期，可选支持选择周几，紧凑样式优化
 // @author       章小慢
 // @match        https://git.xxxxxxx.co/*
 // @grant        GM_addStyle
@@ -11,11 +11,12 @@
 (function() {
     'use strict';
 
-    // 默认选择的星期几（0-6，0代表周日）
-    let selectedWeekday = 2; // 默认周三
+    // 默认不选择星期几（-1表示未选择）
+    let selectedWeekday = -1;
     const VERSION = 'v1'; // 默认版本号
     const BRANCH_PREFIX = 'release/'; // 分支前缀
-    const NUM_OF_DATES = 3; // 生成的日期数量
+    const NUM_OF_RECENT_DATES = 10; // 展示最近的日期数量
+    const NUM_OF_WEEKDAY_DATES = 3; // 基于星期几生成的日期数量
 
     // 计算指定星期几的未来日期
     const getFutureDatesByWeekday = (weekday, count) => {
@@ -39,6 +40,25 @@
             currentDate.setDate(currentDate.getDate() + 7);
         }
 
+        return dates;
+    };
+    
+    // 获取最近n天的日期
+    const getRecentDates = (count) => {
+        const dates = [];
+        const today = new Date();
+        
+        for (let i = 0; i < count; i++) {
+            const currentDate = new Date(today);
+            currentDate.setDate(today.getDate() + i);
+            
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            
+            dates.push(`${year}${month}${day}`);
+        }
+        
         return dates;
     };
 
@@ -70,14 +90,14 @@
             top: 140px;
             right: 20px;
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 9999;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            z-index: 8888;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            width: 320px;
-            max-height: 500px;
-            overflow-y: auto;
+            width: 260px;
+            max-height: 720px;
+            overflow: hidden;
             display: none;
             transition: all 0.3s ease;
         `;
@@ -86,9 +106,9 @@
         const title = document.createElement('h4');
         title.textContent = 'GitLab 分支快捷创建';
         title.style.marginTop = '0';
-        title.style.marginBottom = '20px';
+        title.style.marginBottom = '12px';
         title.style.color = '#333';
-        title.style.fontSize = '16px';
+        title.style.fontSize = '14px';
         title.style.fontWeight = '600';
         title.style.textAlign = 'center';
 
@@ -97,22 +117,22 @@
         weekdayContainer.style.display = 'flex';
         weekdayContainer.style.alignItems = 'center';
         weekdayContainer.style.justifyContent = 'flex-end';
-        weekdayContainer.style.marginBottom = '15px';
-        weekdayContainer.style.gap = '10px';
+        weekdayContainer.style.marginBottom = '10px';
+        weekdayContainer.style.gap = '8px';
         
         const weekdayLabel = document.createElement('label');
         weekdayLabel.textContent = '选择星期几：';
         weekdayLabel.style.whiteSpace = 'nowrap';
         weekdayLabel.style.color = '#555';
-        weekdayLabel.style.fontSize = '12px';
+        weekdayLabel.style.fontSize = '11px';
         
         const weekdaySelect = document.createElement('select');
         weekdaySelect.id = 'branch-weekday-select';
-        weekdaySelect.style.width = '120px';
-        weekdaySelect.style.padding = '8px 12px';
+        weekdaySelect.style.width = '100px';
+        weekdaySelect.style.padding = '6px 8px';
         weekdaySelect.style.border = '1px solid #ddd';
         weekdaySelect.style.borderRadius = '4px';
-        weekdaySelect.style.fontSize = '12px';
+        weekdaySelect.style.fontSize = '11px';
         weekdaySelect.style.boxSizing = 'border-box';
         weekdaySelect.style.outline = 'none';
         weekdaySelect.style.transition = 'border-color 0.3s ease';
@@ -127,13 +147,19 @@
 
         // 添加星期选项
         const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        
+        // 先添加默认的"不选择"选项
+        const defaultOption = document.createElement('option');
+        defaultOption.value = -1;
+        defaultOption.textContent = '';
+        defaultOption.selected = true;
+        weekdaySelect.appendChild(defaultOption);
+        
+        // 然后添加星期几选项
         weekdays.forEach((day, index) => {
             const option = document.createElement('option');
             option.value = index;
             option.textContent = day;
-            if (index === selectedWeekday) {
-                option.selected = true;
-            }
             weekdaySelect.appendChild(option);
         });
 
@@ -146,33 +172,33 @@
         versionContainer.style.display = 'flex';
         versionContainer.style.alignItems = 'center';
         versionContainer.style.justifyContent = 'flex-end';
-        versionContainer.style.marginBottom = '20px';
-        versionContainer.style.gap = '10px';
+        versionContainer.style.marginBottom = '12px';
+        versionContainer.style.gap = '8px';
         
         const versionLabel = document.createElement('label');
         versionLabel.textContent = '版本号：';
         versionLabel.style.whiteSpace = 'nowrap';
         versionLabel.style.color = '#555';
-        versionLabel.style.fontSize = '12px';
+        versionLabel.style.fontSize = '11px';
 
         // 日期列表容器
         const datesContainer = document.createElement('div');
         datesContainer.id = 'dates-list-container';
-        datesContainer.style.marginBottom = '20px';
-        datesContainer.style.maxHeight = '300px';
+        datesContainer.style.marginBottom = '12px';
+        datesContainer.style.maxHeight = '0px';
         datesContainer.style.overflowY = 'auto';
-        datesContainer.style.padding = '5px';
+        datesContainer.style.padding = '4px';
         datesContainer.style.borderRadius = '4px';
         datesContainer.style.backgroundColor = '#f9f9f9';
 
         // 将版本号输入框改为下拉菜单
         const versionSelect = document.createElement('select');
         versionSelect.id = 'branch-version-select';
-        versionSelect.style.width = '120px'; // 与星期选择器宽度保持一致
-        versionSelect.style.padding = '8px 12px';
+        versionSelect.style.width = '100px'; // 与星期选择器宽度保持一致
+        versionSelect.style.padding = '6px 8px';
         versionSelect.style.border = '1px solid #ddd';
         versionSelect.style.borderRadius = '4px';
-        versionSelect.style.fontSize = '12px';
+        versionSelect.style.fontSize = '11px';
         versionSelect.style.boxSizing = 'border-box';
         versionSelect.style.outline = 'none';
         versionSelect.style.transition = 'border-color 0.3s ease';
@@ -205,8 +231,8 @@
         const buttonsContainer = document.createElement('div');
         buttonsContainer.style.display = 'flex';
         buttonsContainer.style.justifyContent = 'space-between';
-        buttonsContainer.style.gap = '10px';
-        buttonsContainer.style.marginTop = '20px';
+        buttonsContainer.style.gap = '8px';
+        buttonsContainer.style.marginTop = '12px';
 
         // 关闭按钮
         const closeBtn = document.createElement('button');
@@ -214,12 +240,12 @@
         closeBtn.style.backgroundColor = '#6c757d';
         closeBtn.style.color = 'white';
         closeBtn.style.border = 'none';
-        closeBtn.style.padding = '10px 16px';
+        closeBtn.style.padding = '8px 12px';
         closeBtn.style.borderRadius = '4px';
         closeBtn.style.cursor = 'pointer';
         closeBtn.style.flex = '1';
-        closeBtn.style.fontSize = '12px';
-        closeBtn.style.transition = 'background-color 0.3s ease';
+        closeBtn.style.fontSize = '11px';
+        closeBtn.style.transition = 'background-color 0.2s ease';
         
         closeBtn.addEventListener('mouseover', () => {
             closeBtn.style.backgroundColor = '#5a6268';
@@ -235,12 +261,12 @@
         refreshBtn.style.backgroundColor = '#007bff';
         refreshBtn.style.color = 'white';
         refreshBtn.style.border = 'none';
-        refreshBtn.style.padding = '10px 16px';
+        refreshBtn.style.padding = '8px 12px';
         refreshBtn.style.borderRadius = '4px';
         refreshBtn.style.cursor = 'pointer';
         refreshBtn.style.flex = '1';
-        refreshBtn.style.fontSize = '12px';
-        refreshBtn.style.transition = 'background-color 0.3s ease';
+        refreshBtn.style.fontSize = '11px';
+        refreshBtn.style.transition = 'background-color 0.2s ease';
         
         refreshBtn.addEventListener('mouseover', () => {
             refreshBtn.style.backgroundColor = '#0056b3';
@@ -260,28 +286,27 @@
             background: #28a745;
             color: white;
             border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
+            padding: 8px 12px;
+            border-radius: 5px;
             cursor: pointer;
             z-index: 10000;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         `;
         toggleBtn.textContent = '创建分支';
-        
         toggleBtn.addEventListener('mouseover', () => {
             toggleBtn.style.backgroundColor = '#218838';
             toggleBtn.style.transform = 'translateY(-1px)';
-            toggleBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.25)';
+            toggleBtn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.25)';
         });
         
         toggleBtn.addEventListener('mouseout', () => {
             toggleBtn.style.backgroundColor = '#28a745';
             toggleBtn.style.transform = 'translateY(0)';
-            toggleBtn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+            toggleBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
 
         // 更新日期列表
@@ -289,32 +314,43 @@
             datesContainer.innerHTML = '';
 
             const version = versionSelect.value.trim() || VERSION;
-            const dates = getFutureDatesByWeekday(selectedWeekday, NUM_OF_DATES);
+            let dates = [];
+            
+            // 根据是否选择了星期几来决定显示哪种日期列表
+            if (selectedWeekday !== -1) {
+                // 选择了星期几，显示基于星期几的日期
+                dates = getFutureDatesByWeekday(selectedWeekday, NUM_OF_WEEKDAY_DATES);
+            } else {
+                // 未选择星期几，显示最近的日期
+                dates = getRecentDates(NUM_OF_RECENT_DATES);
+            }
 
             dates.forEach(date => {
                 const dateItem = document.createElement('div');
-                dateItem.style.marginBottom = '10px';
-                dateItem.style.padding = '10px 12px';
+                dateItem.style.marginBottom = '8px';
+                dateItem.style.padding = '8px 10px';
                 dateItem.style.backgroundColor = 'white';
-                dateItem.style.borderRadius = '6px';
+                dateItem.style.borderRadius = '5px';
                 dateItem.style.display = 'flex';
                 dateItem.style.justifyContent = 'space-between';
                 dateItem.style.alignItems = 'center';
-                dateItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                dateItem.style.transition = 'box-shadow 0.3s ease';
+                dateItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+                dateItem.style.transition = 'box-shadow 0.2s ease';
                 
                 dateItem.addEventListener('mouseover', () => {
-                    dateItem.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+                    dateItem.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
                 });
                 
                 dateItem.addEventListener('mouseout', () => {
-                    dateItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    dateItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
                 });
 
                 const dateText = document.createElement('span');
                 dateText.textContent = formatDateForDisplay(date);
-                dateText.style.fontSize = '12px';
+                dateText.style.fontSize = '11px';
                 dateText.style.color = '#333';
+                dateText.style.flex = '1';
+                dateText.style.marginRight = '8px';
 
                 const createBtn = document.createElement('button');
                 const branchName = `${BRANCH_PREFIX}${date}/${version}`;
@@ -322,11 +358,13 @@
                 createBtn.style.backgroundColor = '#17a2b8';
                 createBtn.style.color = 'white';
                 createBtn.style.border = 'none';
-                createBtn.style.padding = '6px 12px';
-                createBtn.style.borderRadius = '4px';
+                createBtn.style.padding = '4px 8px';
+                createBtn.style.borderRadius = '3px';
                 createBtn.style.cursor = 'pointer';
-                createBtn.style.fontSize = '12px';
-                createBtn.style.transition = 'background-color 0.3s ease';
+                createBtn.style.fontSize = '11px';
+                createBtn.style.transition = 'background-color 0.2s ease';
+                createBtn.style.minWidth = '40px';
+                createBtn.style.textAlign = 'center';
                 
                 createBtn.addEventListener('mouseover', () => {
                     createBtn.style.backgroundColor = '#138496';

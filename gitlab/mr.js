@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MR目标分支设置
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  自定义GitLab推送后创建合并请求的目标分支，支持手动设置
 // @author       章小慢
 // @match        https://git.xxxxx.co/* 
@@ -28,7 +28,7 @@
             return;
         }
         
-        // 创建面板元素
+        // 创建面板元素 - 更紧凑的样式
         const panel = document.createElement('div');
         panel.id = 'mr-branch-settings-panel';
         panel.style.cssText = `
@@ -36,43 +36,73 @@
             top: 90px;
             right: 20px;
             background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 9999;
-            font-family: Arial, sans-serif;
-            width: 280px;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 8888;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            width: 260px;
+            margin: 0;
+            overflow: hidden; /* 避免内部元素产生滚动条 */
         `;
         
-        // 面板标题
+        // 面板标题 - 减少边距和字体大小
         const title = document.createElement('h4');
         title.textContent = 'MR目标分支设置';
         title.style.marginTop = '0';
-        title.style.marginBottom = '10px';
+        title.style.marginBottom = '8px';
+        title.style.fontSize = '14px';
+        title.style.fontWeight = '500';
+        title.style.color = '#333';
         
-        // 输入框
+        // 输入框 - 更紧凑的样式
         const input = document.createElement('input');
         input.type = 'text';
         input.id = 'target-branch-input';
         input.value = TARGET_BRANCH;
         input.style.width = '100%';
-        input.style.padding = '8px';
-        input.style.marginBottom = '10px';
+        input.style.padding = '6px 8px';
+        input.style.marginBottom = '8px';
         input.style.boxSizing = 'border-box';
+        input.style.border = '1px solid #ddd';
+        input.style.borderRadius = '4px';
+        input.style.fontSize = '13px';
+        input.style.outline = 'none';
         input.placeholder = '输入目标分支名称';
+        input.style.transition = 'border-color 0.2s ease';
         
-        // 保存按钮
+        // 添加输入框焦点效果
+        input.addEventListener('focus', () => {
+            input.style.borderColor = '#007bff';
+        });
+        
+        input.addEventListener('blur', () => {
+            input.style.borderColor = '#ddd';
+        });
+        
+        // 保存按钮 - 更紧凑的样式
         const saveBtn = document.createElement('button');
         saveBtn.textContent = '保存设置';
         saveBtn.style.backgroundColor = '#28a745';
         saveBtn.style.color = 'white';
         saveBtn.style.border = 'none';
-        saveBtn.style.padding = '8px 15px';
+        saveBtn.style.padding = '6px 12px';
         saveBtn.style.borderRadius = '4px';
         saveBtn.style.cursor = 'pointer';
         saveBtn.style.width = '100%';
+        saveBtn.style.fontSize = '13px';
+        saveBtn.style.transition = 'background-color 0.2s ease';
         
-        // 切换面板显示的按钮
+        // 添加按钮悬停效果
+        saveBtn.addEventListener('mouseover', () => {
+            saveBtn.style.backgroundColor = '#218838';
+        });
+        
+        saveBtn.addEventListener('mouseout', () => {
+            saveBtn.style.backgroundColor = '#28a745';
+        });
+        
+        // 切换面板显示的按钮 - 更紧凑的样式
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'toggle-settings-btn';
         toggleBtn.style.cssText = `
@@ -82,15 +112,32 @@
             background: #007bff;
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 7px 12px;
             border-radius: 4px;
             cursor: pointer;
             z-index: 10000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         `;
         
         // 初始化按钮文本
         updateToggleButtonText(toggleBtn);
+        
+        // 添加按钮悬停效果
+        toggleBtn.addEventListener('mouseover', () => {
+            toggleBtn.style.backgroundColor = '#0056b3';
+            toggleBtn.style.transform = 'translateY(-1px)';
+            toggleBtn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+        });
+        
+        toggleBtn.addEventListener('mouseout', () => {
+            toggleBtn.style.backgroundColor = '#007bff';
+            toggleBtn.style.transform = 'translateY(0)';
+            toggleBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
         
         // 保存设置
         saveBtn.addEventListener('click', () => {
@@ -98,8 +145,7 @@
             if (newBranch) {
                 TARGET_BRANCH = newBranch;
                 GM_setValue('gitlabMrTargetBranch', TARGET_BRANCH);
-                console.log(`已设置目标分支为: ${TARGET_BRANCH}`)
-                
+                console.log(`已设置目标分支为: ${TARGET_BRANCH}`);
                 
                 // 更新按钮文本
                 updateToggleButtonText(toggleBtn);
@@ -121,7 +167,11 @@
         toggleBtn.addEventListener('click', () => {
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
             toggleBtn.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            input.focus();
+            if (panel.style.display === 'block') {
+                input.focus();
+                // 选中输入框内容
+                input.select();
+            }
         });
         
         // 组装面板
