@@ -78,7 +78,7 @@ input[type="number"]::-webkit-inner-spin-button {
     // 验证故事要点输入是否有效
     function isValidStoryPoint(value) {
         const num = parseInt(value);
-        return !isNaN(num) && num > 0;
+        return !isNaN(num) && num >= 0;
     }
 
     // 替换故事要点TD为可编辑组件
@@ -147,7 +147,7 @@ input[type="number"]::-webkit-inner-spin-button {
         input.type = 'text';
         input.className = 'story-points-input';
         input.value = originalPoints || '';
-        input.min = '1';
+        input.min = '0';
         // 移除max和step属性
 
         // 创建保存按钮
